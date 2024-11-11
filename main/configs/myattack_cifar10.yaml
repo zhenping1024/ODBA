@@ -1,0 +1,120 @@
+program: sweep_interface.py
+method: grid
+name: clean
+metric:
+    name: asr_acc
+    goal: maximize
+    
+parameters:
+    seed:  #随机种子
+        value: 0
+    lr: #学习率
+        values: [0.01]
+    gamma:  #学习率衰减
+        values: [1]
+    lr_method:  #学习率衰减方法,linear,exp
+        values: ['linear']
+    target_lr:  #目标学习率（非目标类学习率）
+        values: [0.02]
+    momentum:   #动量
+        values: [0.9]
+    decay:    #权重衰减
+        values: [0.0005]
+    batch_size: 
+        values: [64]
+    test_batch_size:
+        values: [1024]
+    num_worker:
+        value: 2
+    num_sampled_participants:   #每轮训练选择的客户端数量
+        value: 10
+    sample_method:  #客户端选择 ，random，random_updates，fix-rate
+        values: ['random']
+    sample_poison_ratio:    #投毒客户端比例，random_updates时使用
+        values: [0]
+    dirichlet_alpha:    #狄利克雷分布参数
+        values: [0.9]
+    retrain_times:  #本地客户端训练次数
+        values: [2]
+    attacker_retrain_times: #攻击者本地客户端训练次数
+        values: [2]
+    save_every:     #保存模型间隔
+        value: 10000
+    attacker_method:   #攻击方法,加sin启动自适应
+        values: ['sin-adv']
+    malicious_update_method:
+        values: ['label']
+    agg_method:     #聚合方法，avg,clip,fedprox,fednova,dp,krum,multkrum，bulyan,rfa
+        values: ['avg']
+    mu:     #fedprox参数
+        values: [0.01]
+    clip_factor:    #clip因子
+        values: [1]
+    attacker_lr_decay:
+        values: [5]
+    trigger_lr:     #触发器学习率
+        values: [0.01]
+    load_benign_model:  #是否加载良性模型模型
+        values: [true]
+    adv_loss:
+        values: ['ce']
+    dm_type:
+        values: ['none']
+    dm_adv_epochs:  #全局模型去学习训练轮数
+        values: [5]
+    dm_adv_K:
+        values: [1]
+    dm_adv_model_count: #全局模型去学习模型数量
+        values: [1]
+    noise_model_count:
+        values: [9]
+    noise_loss_lambda:  #噪声损失权重
+        values: [0.01]
+    wp_factor:
+        values: [0.05]
+    trigger_path:   #触发器路径
+        values: ['/Data/wang/project/A3FL/main/triggers/best_noise_2_myattack_gen_2_06-29-17_13_04.npy']
+    attack_type:    #攻击类型
+        values: ['my']
+    is_log:         #是否记录日志
+        values: [false]
+    l_inf:          #l_inf约束[x/255]
+        values: [16]
+    trigger_x:
+        values: [0]
+    trigger_y:
+        values: [0]
+    trigger_outter_epochs:  #触发器自适应训练轮数
+        values: [150]
+    poison_start_epoch: #投毒开始的epoch
+        values: [1900]
+    epochs:        #训练eopchs总数
+        values: [1100]
+    poison_epochs:  #投毒训练epochs总数
+        values: [15]
+    num_total_participants: #客户端总数
+        value: 100
+    trigger_size:   #触发器大小
+        values: [16]
+    bkd_ratio:      #投毒率
+        values: [0.5]
+    muil:
+        values: [3.0]
+    dataset:
+        values: ['cifar10'] #cifar10, tiny-imagenet,GTSRB
+    is_cam:
+        values: [true]
+    trigger_coord:
+        values: ['significant'] #unsignificant, significant
+    target_class:   #目标类别
+        values: [2]
+    is_poison:      #是否投毒训练
+        value: true
+    num_adversaries:    #攻击者数量
+        values: [2]
+    trigger_type:
+        values: ['my'] #gaussian, fix,my
+    is_adv:
+        value: true
+    is_single_shot:
+        value: false
