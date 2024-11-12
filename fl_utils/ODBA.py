@@ -52,7 +52,6 @@ class MyAttacker:
             # self.setup_cam()
         self.trigger0 = self.trigger.clone()
     def setup_cam(self):
-        # 设置Grad-CAM使用的层
         self.target_layers = [self.model.layer4[-1]]
         
     def apply_trigger(self, inputs,t, x, y,model):
@@ -186,7 +185,7 @@ class MyAttacker:
                 outputs = model(inputs) 
                 loss = ce_loss(outputs, labels)
                 
-                if self.helper.config.is_adv and len(adv_models) > 0:
+                if len(adv_models) > 0:
                     for am_idx in range(len(adv_models)):
                         adv_model = adv_models[am_idx]
                         adv_w = adv_ws[am_idx]
@@ -198,14 +197,6 @@ class MyAttacker:
                             loss += self.helper.config.noise_loss_lambda*adv_w*nm_loss/self.helper.config.dm_adv_model_count
                         # print(f"adving...............")
                 if loss != None:
-                    # loss.backward()
-                    # normal_grad += t.grad.sum()
-                    # new_t = t - alpha*t.grad.sign()
-                    # t = new_t.detach_()
-                    # t.requires_grad_(True)
-                    # t =torch.clamp(t, min = -32/255, max = 32/255)
-                    # t.requires_grad_()
-                    # loss = -loss
                     trigger_optim.zero_grad()
                     loss.backward(retain_graph=True)
                     trigger_optim.step()
@@ -223,10 +214,6 @@ class MyAttacker:
             muil = self.helper.config.muil
         else:
             bkd_num = int(self.helper.config.bkd_ratio * inputs.shape[0])
-        
-        # inputs[:bkd_num] = torch.clamp(self.trigger*muil+ inputs[:bkd_num], -1, 1)
-
-        # Choose the position (x, y) for the trigger
         x = self.trigger_x
         y = self.trigger_y
 
@@ -247,7 +234,6 @@ class MyAttacker:
             else:
                 bkd_num = int(self.helper.config.bkd_ratio * inputs.shape[0])
         
-        # Get model predictions
         model.eval()  # Set model to evaluation mode
         with torch.no_grad():  # Disable gradient calculation
             outputs = model(inputs)
@@ -263,51 +249,6 @@ class MyAttacker:
         return inputs, labels
     
 
-
-    # def poison_dataloader(self, original_dataloader,eval=False):
-    #     """
-    #     通过在原始 dataloader 的部分数据中注入毒素来生成一个带有投毒数据的新 dataloader。
-        
-    #     :param original_dataloader: 包含干净数据的原始 dataloader。
-    #     :param poison_rate: 投毒率（例如，0.1 表示 10% 的数据将被投毒）。
-    #     :return: 一个带有投毒数据的新 dataloader。
-    #     """
-    #     poisoned_data = []  # 存储投毒后的数据
-    #     all_inputs = []  # 存储所有输入数据
-    #     all_labels = []  # 存储所有标签
-    #     device = self.trigger.device
-    #     # 从原始 dataloader 中收集所有数据
-    #     for inputs, labels in original_dataloader:
-    #         all_inputs.append(inputs)  # 将每个 batch 的输入数据添加到 all_inputs 列表中
-    #         all_labels.append(labels)  # 将每个 batch 的标签数据添加到 all_labels 列表中
-
-    #     # 将列表中的所有数据拼接成一个大的 Tensor
-    #     all_inputs = torch.cat(all_inputs).to(device)
-    #     all_labels = torch.cat(all_labels).to(device)
-        
-    #     num_samples = all_inputs.size(0)  # 获取数据集的总样本数
-    #     poison_rate = self.helper.config.bkd_ratio
-    #     num_poison = int(num_samples * poison_rate)  # 根据投毒率计算需要投毒的样本数量
-    #     print(f"num_samples: {num_samples}")
-    #     print(f"num_poison: {num_poison}")
-    #     # 随机选择需要投毒的样本索引
-    #     poison_indices = np.random.choice(num_samples, num_poison, replace=False)
-
-    #     # 对选中的样本进行投毒
-    #     for idx in poison_indices:
-    #         # all_inputs[idx], all_labels[idx] = self.poison_one_input(all_inputs[idx], all_labels[idx])
-    #         muil = 1.0
-    #         if eval:
-    #             muil = 3.0
-    #         all_inputs[idx] = torch.clamp(self.trigger *muil + all_inputs[idx], -1, 1)
-    #         all_labels[idx] = self.helper.config.target_class
-
-    #     # 创建新的带有投毒数据的数据集
-    #     poisoned_dataset = torch.utils.data.TensorDataset(all_inputs, all_labels)
-    #     # 使用新的数据集创建新的 dataloader
-    #     poisoned_dataloader = torch.utils.data.DataLoader(poisoned_dataset, batch_size=original_dataloader.batch_size, shuffle=True)
-        
-    #     return poisoned_dataloader  # 返回新的带有投毒数据的 dataloader
 
     def poison_dataloader(self, original_dataloader, eval=False,model=None):
         """
@@ -337,15 +278,7 @@ class MyAttacker:
         poison_indices = np.random.choice(num_samples, num_poison, replace=False)
 
 
-        # if self.helper.config.is_cam:
-        #     # Set the position (x, y) for the trigger
-        #     x = self.trigger_x
-        #     y = self.trigger_y
-
-        #     # Poison the selected samples
-        #     for idx in poison_indices:
-        #         all_inputs[idx][:, y:y+self.trigger_size, x:x+self.trigger_size] +=self.trigger.squeeze(0)
-        #         all_labels[idx] = self.helper.config.target_class
+ 
         if self.helper.config.is_cam:
             cam = GradCAM(model=model, target_layers=[model.layer4[-1]])
             # Poison the selected samples

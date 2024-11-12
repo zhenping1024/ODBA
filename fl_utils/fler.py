@@ -18,8 +18,7 @@ from models.resnet import ResNet18
 import copy
 import os
 from datetime import datetime
-from .attacker import Attacker
-from .myattacker import MyAttacker
+from .ODBA import MyAttacker
 from .aggregator import Aggregator
 from math import ceil
 import pickle
@@ -27,11 +26,9 @@ import pickle
 class FLer:
     def __init__(self, helper):
         os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
-        # 设置要使用的GPU
         # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
         self.device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
         self.helper = helper
-        #定义损失函数
         self.criterion = torch.nn.CrossEntropyLoss(label_smoothing = 0.001)
         self.cos_sim = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
         self.attack_sum = 0 
@@ -41,8 +38,6 @@ class FLer:
         if self.helper.config.is_poison:
             if self.helper.config.attack_type == 'my':
                 self.attacker = MyAttacker(self.helper)
-            elif self.helper.config.attack_type == 'a3fl':
-                self.attacker = Attacker(self.helper)
         else:
             self.attacker = None
         if self.helper.config.sample_method == 'random_updates':
@@ -54,9 +49,6 @@ class FLer:
             print(f'Load benign model {model_path}, acc {acc:.3f}')
         
  
-        # if self.helper.config.agg_method == 'foolsgold':
-        #     pytorch_total_params = sum(p.numel() for p in self.helper.global_model.parameters())
-        #     self.aggregator.init_foolsgold(pytorch_total_params)
         return
     
     def init_advs(self):
@@ -106,67 +98,57 @@ class FLer:
         model.train()
         return loss, acc
     def crfl_test_once(self, logimage=False, is_log=False,poison=False):
-        # 使用全局模型进行预测
+        
         model = self.helper.global_model
         model.eval()
 
-        # 获取测试数据集
+        
         data_source = self.helper.test_data
 
-        # 初始化评估指标
+        
         total_loss = 0
         correct = 0
         num_data = 0.
 
-        # 创建添加了差分隐私噪声的模型列表，共创建5个模型
-        # 您将负责添加噪声的实现，因此此处假设模型已经添加了噪声
-        smoothed_models = [model for _ in range(5)]  # 模型列表，可以在外部添加噪声
+        
+        smoothed_models = [model for _ in range(5)]  
 
 
-        # 在不计算梯度的情况下进行测试
+        
         with torch.no_grad():
-            # 遍历测试数据集中的每个批次
+            
             for batch_id, batch in enumerate(data_source):
                 data, targets = batch
                 data, targets = data.cuda(), targets.cuda()
-                data_clean = data  # 保存原始数据，供日志记录使用
+                data_clean = data  
                 if poison:
                     if self.helper.config.attack_type == 'my':
                         data, targets = self.attacker.poison_input(data, targets, eval=True,model=model)
-                    elif self.helper.config.attack_type == 'a3fl':
-                        data, targets = self.attacker.poison_input(data, targets, eval=True)
-                # 初始化输出为0
+                    
+                
                 outputs = 0
-                # 对每个添加噪声的模型进行预测
+                
                 for smoothed_model in smoothed_models:
-                    # 获取模型的输出
+                    
                     output = smoothed_model(data)
-                    # 计算模型的输出概率分布
                     prob = torch.nn.functional.softmax(output, dim=1)
-                    # 累加所有模型的输出概率
+        
                     outputs += prob
-                # 计算平均输出概率
+                
                 outputs /= len(smoothed_models)
 
-                # 计算损失
                 total_loss += self.criterion(outputs.log(), targets).item()
-                # 获取预测结果
                 pred = outputs.data.max(1)[1]
-                # 统计正确的预测数量
                 correct += pred.eq(targets.data.view_as(pred)).cpu().sum().item()
-                # 统计总的数据量
                 num_data += outputs.size(0)
 
-                # 如果需要记录图像和日志
                 if is_log and batch_id <= 5 and logimage:
                     self.log_image_table(images=data, clean_image=data_clean, predicted=pred, labels=targets, probs=outputs)
 
-            # 计算准确率和平均损失
             acc = 100.0 * (float(correct) / float(num_data))
             loss = total_loss / float(num_data)
 
 
-            # 恢复模型为训练模式
             model.train()
 
             return loss ,acc
@@ -205,7 +187,6 @@ class FLer:
         self.save_model(epoch, log_dict)
 
     def save_model(self, epoch, log_dict):
-        #投毒情况下不保存模型
         if epoch % self.helper.config.save_every == 0:
             log_dict['model'] = self.helper.global_model.state_dict()
             if self.helper.config.is_poison:
@@ -222,7 +203,6 @@ class FLer:
             'asrs': asrs
         }
         atk_method = self.helper.config.attacker_method
-        # 获取当前时间戳
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         if self.helper.config.sample_method == 'random':
             file_name = f'{self.helper.config.dataset}/{timestamp}_{self.helper.config.agg_method}_{atk_method}_r_{self.helper.config.num_adversaries}_{self.helper.config.poison_epochs}_ts{self.helper.config.attack_type}.pkl'
@@ -230,10 +210,8 @@ class FLer:
             raise NotImplementedError
 
         save_path = os.path.join(f'../saved/res/{file_name}')
-        # 获取目录路径
         directory = os.path.dirname(save_path)
     
-        # 如果目录不存在，则创建目录
         if not os.path.exists(directory):
             os.makedirs(directory)
         f_save = open(save_path, 'wb')
@@ -265,9 +243,7 @@ class FLer:
         if self.helper.config.is_poison:
             self.save_res(accs, asrs)
             
-    # 保存触发器和模型
     def save_trigger(self, epoch, trigger, model):
-        #检查保存目录是否存在
         if not os.path.exists('../saved/trigger'):
             os.makedirs('../saved/trigger')
         if not os.path.exists('../saved/model'):
@@ -406,7 +382,6 @@ class FLer:
             weight_decay=self.helper.config.decay)
         
         if self.helper.config.agg_method == 'fedprox':
-            # 获取全局模型参数的副本，用于FedProx近端项
             global_model_params = [param.clone().detach() for param in model.parameters()]
 
         for internal_epoch in range(self.helper.config.retrain_times):
@@ -418,7 +393,6 @@ class FLer:
                 loss = self.criterion(output, labels)
 
                 if self.helper.config.agg_method == 'fedprox':
-                    # 计算FedProx近端项
                     for global_param, local_param in zip(global_model_params, model.parameters()):
                         fedprox_loss =self.helper.config.mu / 2 * torch.norm(global_param - local_param)
                         loss += fedprox_loss
@@ -452,7 +426,6 @@ class FLer:
             poisoned_dataloader = self.attacker.poison_dataloader(self.helper.train_data[participant_id])
 
         if self.helper.config.agg_method == 'fedprox':
-            # 获取全局模型参数的副本，用于FedProx近端项
             global_model_params = [param.clone().detach() for param in model.parameters()]
 
         for internal_epoch in range(self.helper.config.attacker_retrain_times):
@@ -464,7 +437,6 @@ class FLer:
                 loss = self.attacker_criterion(output, labels)
 
                 if self.helper.config.agg_method == 'fedprox':
-                    # 计算FedProx近端项
                     for global_param, local_param in zip(global_model_params, model.parameters()):
                         fedprox_loss =self.helper.config.mu / 2 * torch.norm(global_param - local_param)
                         loss += fedprox_loss
@@ -523,13 +495,10 @@ class FLer:
         # table = wandb.Table(columns=["image","clean" "pred", "target"]+[f"score_{i}" for i in range(43)])
         table = wandb.Table(columns=["image","clean" ,"pred", "target"])
         for img,clean, pred, targ, prob in zip(images.to("cpu"), clean_image.to("cpu"),predicted.to("cpu"), labels.to("cpu"), probs.to("cpu")):
-            #黑白
-            # table.add_data(wandb.Image(img[0].numpy()*255), pred, targ, *prob.numpy())
-            #彩色
-            img = img.detach().numpy().transpose(1, 2, 0)  # 转换为 (H, W, C) 格式
-            # img = img.numpy().transpose(1, 2, 0)  # 转换为 (H, W, C) 格式
+
+            img = img.detach().numpy().transpose(1, 2, 0)  
             img = (img * 0.5 + 0.5)
-            img = (img * 255).astype(np.uint8)  # 将图像数据缩放到 [0, 255] 并转换为 uint8 类型
+            img = (img * 255).astype(np.uint8)  
             clean = clean.detach().numpy().transpose(1, 2, 0)
             clean = (clean * 0.5 + 0.5)
             clean = (clean * 255).astype(np.uint8)

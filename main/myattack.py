@@ -57,9 +57,8 @@ def main():
 
 if __name__ == '__main__':
     torch.autograd.set_detect_anomaly(True)
-    # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
     parser = argparse.ArgumentParser()
-    parser.add_argument('--params', default = './configs/myattack_cifar10.yaml')
+    parser.add_argument('--params', default = './configs/cifar10.yaml')
     parser.add_argument('--gpu', default = 2)
     parser.add_argument('--sweep',default= True)
     parser.add_argument('--project_name', default = 'ODBA_CIFAR10')
