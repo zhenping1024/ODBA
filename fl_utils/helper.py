@@ -20,7 +20,7 @@ class Helper:
         self.config = config
         
 
-        self.config.data_folder = '/Data/wang/dataset'
+        self.config.data_folder = 'dataset'
         
         self.local_model = None
         self.global_model = None
@@ -130,15 +130,15 @@ class Helper:
             self.test_dataset = datasets.CIFAR10(self.config.data_folder, train=False, transform=transform_test)
         elif self.config.dataset == 'tiny-imagenet':
             self.num_classes = 200
-            self.train_dataset = datasets.ImageFolder('/Data/wang/dataset/tiny-imagenet-200/train/', transform=transform_train_tiny)
-            self.test_dataset = datasets.ImageFolder('/Data/wang/dataset/tiny-imagenet-200/val/', transform=transform_test_tiny)
+            self.train_dataset = datasets.ImageFolder('/Data/dataset/tiny-imagenet-200/train/', transform=transform_train_tiny)
+            self.test_dataset = datasets.ImageFolder('/Data/dataset/tiny-imagenet-200/val/', transform=transform_test_tiny)
         elif self.config.dataset == 'GTSRB':
             self.num_classes = 43
             #TODO: GTSRB dataset
             # 定义路径
-            train_dir = '/Data/wang/dataset/GTSRB/Final_Training/Images'
-            test_dir = '/Data/wang/dataset/GTSRB/Final_Test/Images'
-            test_csv = '/Data/wang/dataset/GTSRB/Final_Test/GT-final_test.csv'
+            train_dir = '/Data/dataset/GTSRB/Final_Training/Images'
+            test_dir = '/Data/dataset/GTSRB/Final_Test/Images'
+            test_csv = '/Data/dataset/GTSRB/Final_Test/GT-final_test.csv'
 
             self.train_dataset = GTSRBDataset(root_dir=train_dir, csv_file=None, transform=transform_GTSRB_train)
             self.test_dataset = GTSRBDataset(root_dir=test_dir, csv_file=test_csv, transform=transform_GTSRB)

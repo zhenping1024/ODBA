@@ -83,8 +83,7 @@ class FLer:
             if poison:
                 if self.helper.config.attack_type == 'my':
                     data, targets = self.attacker.poison_input(data, targets, eval=True,model=model)
-                elif self.helper.config.attack_type == 'a3fl':
-                    data, targets = self.attacker.poison_input(data, targets, eval=True)
+    
             output = model(data)
             total_loss += self.criterion(output, targets).item()
             pred = output.data.max(1)[1] 

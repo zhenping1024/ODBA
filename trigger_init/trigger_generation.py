@@ -144,48 +144,37 @@ def init_trigger(dataset_path, lab,device,pre_train=False):
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
     ])
 
-    # 加载数据集
     ori_train = torchvision.datasets.CIFAR10(root=dataset_path, train=True, download=False, transform=transform_train)
     ori_test = torchvision.datasets.CIFAR10(root=dataset_path, train=False, download=False, transform=transform_test)
     outter_trainset = torchvision.datasets.ImageFolder(root=dataset_path + 'tiny-imagenet-200/train/', transform=transform_surrogate_train)
 
-    # 获取标签
     train_label = [get_labels(ori_train)[x] for x in range(len(get_labels(ori_train)))]
     test_label = [get_labels(ori_test)[x] for x in range(len(get_labels(ori_test)))]
 
-    # 提取目标类子集
     train_target_list = list(np.where(np.array(train_label) == lab)[0])
     train_target = Subset(ori_train, train_target_list)
 
-    # 混合数据集
     concoct_train_dataset = concoct_dataset(train_target, outter_trainset)
 
-    # 创建数据加载器
     surrogate_loader = DataLoader(concoct_train_dataset, batch_size=train_batch_size, shuffle=True, num_workers=16)
     poi_warm_up_loader = DataLoader(train_target, batch_size=train_batch_size, shuffle=True, num_workers=16)
     trigger_gen_loaders = DataLoader(train_target, batch_size=train_batch_size, shuffle=True, num_workers=16)
 
-    # 初始化噪声
     noise = torch.zeros((1, 3, noise_size, noise_size), device=device)
 
-    # 训练替代模型
     
     if pre_train:
         surrogate_model.load_state_dict(torch.load('./checkpoint/surrogate_pretrain_200.pth'))
     else:
         surrogate_model = train_surrogate_model(surrogate_model, surrogate_loader, surrogate_epochs,device=device)
-        # 保存替代模型
         save_path = './checkpoint/surrogate_pretrain_' + str(surrogate_epochs) + '.pth'
         torch.save(surrogate_model.state_dict(), save_path)
 
-    # 准备毒化预热阶段的模型
     poi_warm_up_model = generating_model
     # poi_warm_up_model.load_state_dict(surrogate_model.state_dict())
 
-    # 毒化预热
     poi_warm_up_model = poison_warmup(poi_warm_up_model, poi_warm_up_loader, warmup_round, generating_lr_warmup,device=device)
 
-    # 生成触发器
     best_noise = generate_init_trigger(poi_warm_up_model, trigger_gen_loaders, noise, gen_round, generating_lr_tri, l_inf_r, patch_mode,device=device,lab=lab)
 
     return best_noise

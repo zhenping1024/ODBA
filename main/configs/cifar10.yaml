@@ -44,9 +44,9 @@ parameters:
         values: ['sin-adv']
     malicious_update_method:
         values: ['label']
-    agg_method:     #avg,clip,fedprox,fednova,dp,krum,multkrum，bulyan,rfa
+    agg_method:     
         values: ['avg']
-    mu:     #fedprox参数
+    mu:     
         values: [0.01]
     clip_factor:    
         values: [1]
@@ -94,24 +94,24 @@ parameters:
         values: [100]
     num_total_participants: #客户端总数
         value: 100
-    trigger_size:   #触发器大小
+    trigger_size:   
         values: [16]
-    bkd_ratio:      #投毒率
+    bkd_ratio:     
         values: [0.25]
     muil:
         values: [3.0]
     dataset:
-        values: ['cifar10'] #cifar10, tiny-imagenet,GTSRB
+        values: ['cifar10'] 
     is_cam:
         values: [true]
     trigger_coord:
-        values: ['significant'] #unsignificant, significant
-    target_class:   #目标类别
+        values: ['significant'] 
+    target_class:  
         values: [2]
-    is_poison:      #是否投毒训练
+    is_poison:      
         value: true
-    num_adversaries:    #攻击者数量
+    num_adversaries:    
         values: [1]
     trigger_type:
-        values: ['my'] #gaussian, fix,my
+        values: ['my'] 
 
