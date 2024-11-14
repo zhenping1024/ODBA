@@ -144,21 +144,18 @@ def init_trigger(dataset_path, lab,device,pre_train=False):
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
     ])
 
-    ori_train = torchvision.datasets.CIFAR10(root=dataset_path, train=True, download=False, transform=transform_train)
-    ori_test = torchvision.datasets.CIFAR10(root=dataset_path, train=False, download=False, transform=transform_test)
     outter_trainset = torchvision.datasets.ImageFolder(root=dataset_path + 'tiny-imagenet-200/train/', transform=transform_surrogate_train)
 
-    train_label = [get_labels(ori_train)[x] for x in range(len(get_labels(ori_train)))]
-    test_label = [get_labels(ori_test)[x] for x in range(len(get_labels(ori_test)))]
+    train_label = [get_labels(outter_trainset)[x] for x in range(len(get_labels(outter_trainset)))]
 
-    train_target_list = list(np.where(np.array(train_label) == lab)[0])
-    train_target = Subset(ori_train, train_target_list)
 
-    concoct_train_dataset = concoct_dataset(train_target, outter_trainset)
+    train_wo_target_list = list(np.where(np.array(train_label) != lab)[0])
+    train_wo_target = Subset(outter_trainset, train_wo_target_list)
+
+    concoct_train_dataset = concoct_dataset(train_wo_target, outter_trainset)
 
     surrogate_loader = DataLoader(concoct_train_dataset, batch_size=train_batch_size, shuffle=True, num_workers=16)
-    poi_warm_up_loader = DataLoader(train_target, batch_size=train_batch_size, shuffle=True, num_workers=16)
-    trigger_gen_loaders = DataLoader(train_target, batch_size=train_batch_size, shuffle=True, num_workers=16)
+    trigger_gen_loaders = DataLoader(concoct_dataset, batch_size=train_batch_size, shuffle=True, num_workers=16)
 
     noise = torch.zeros((1, 3, noise_size, noise_size), device=device)
 
@@ -173,7 +170,6 @@ def init_trigger(dataset_path, lab,device,pre_train=False):
     poi_warm_up_model = generating_model
     # poi_warm_up_model.load_state_dict(surrogate_model.state_dict())
 
-    poi_warm_up_model = poison_warmup(poi_warm_up_model, poi_warm_up_loader, warmup_round, generating_lr_warmup,device=device)
 
     best_noise = generate_init_trigger(poi_warm_up_model, trigger_gen_loaders, noise, gen_round, generating_lr_tri, l_inf_r, patch_mode,device=device,lab=lab)
 
