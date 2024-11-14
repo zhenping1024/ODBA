@@ -13,7 +13,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import TensorDataset, DataLoader, Subset
 import torchvision.models as models
 import torch.nn.functional as F
-from models import *
+from models.resnet import ResNet18
 
 import os
 import copy
@@ -113,8 +113,8 @@ def init_trigger(dataset_path, lab,device,pre_train=False):
     # 参数初始化
     noise_size = 32
     l_inf_r = 16/255
-    surrogate_model = ResNet18_201().to(device)
-    generating_model = ResNet18_201().to(device)
+    surrogate_model = ResNet18(num_classes=10).to(device)
+    generating_model = ResNet18(num_classes=10).to(device)
     surrogate_epochs = 200
     generating_lr_warmup = 0.1
     warmup_round = 5
